@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: certs-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: certs-controller
+  template:
+    metadata:
+      labels:
+        name: certs-controller
+    spec:
+      serviceAccountName: certs-controller
+      containers:
+        - name: certs-controller
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
+          command:
+          - certs-controller
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "certs-controller"
