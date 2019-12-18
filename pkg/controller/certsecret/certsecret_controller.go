@@ -88,7 +88,6 @@ type ReconcileCertSecret struct {
 func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CertSecret")
-
 	// Fetch the CertSecret instance
 	instance := &appv1alpha1.CertSecret{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -126,12 +125,14 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 			}, secret)
 			if err2 != nil && errors.IsNotFound(err2) {
 				reqLogger.Info(fmt.Sprintf("1|查询secret %s/%s 报错，不存在", ns.Name, t.Name))
+				fmt.Println(secret)
 				// 不存在创建
 				reqLogger.Info(fmt.Sprintf("2|创建secret:%s/%s", ns.Name, t.Name))
 				//reqLogger.Info(fmt.Sprintf("3|查询的secret:%s/%s", secret.Namespace, secret.Name))
 				newSecret := resources.NewSecret(instance, t, ns.Name)
-				if err := r.client.Create(context.TODO(), newSecret); err != nil {
-					return reconcile.Result{}, err
+				if errn := r.client.Create(context.TODO(), newSecret); errn != nil {
+					reqLogger.Error(errn, "创建secret失败")
+					//return reconcile.Result{}, nil
 				}
 			} else {
 				reqLogger.Info(fmt.Sprintf("4| secret:%s/%s 已存在", ns.Name, t.Name))
@@ -149,24 +150,44 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 		if err := json.Unmarshal([]byte(instance.Annotations["spec"]), oldInstanceSpec); err != nil {
 			reqLogger.Info("Annotations[spec]不存在或格式错误")
 			reqLogger.Info("7| 第一次创建，保存spec内容到当前实例")
-			//if err := r.client.Update(context.TODO(), instance); err != nil {
-			//	return reconcile.Result{}, err
-			//}
-			return reconcile.Result{Requeue: false}, nil
-		}
-
-		// 与上次配置对比，如果不一致则更新
-		if !reflect.DeepEqual(instance.Spec, *oldInstanceSpec) {
+			instance.Annotations["spec"] = string(data)
+			if err7 := r.client.Update(context.TODO(), instance); err7 != nil {
+				reqLogger.Error(err7, "更新Annotations失败")
+				//return reconcile.Result{}, nil
+			}
+			return reconcile.Result{Requeue: true}, nil
+		} else if !reflect.DeepEqual(instance.Spec, *oldInstanceSpec) {
 			reqLogger.Info("Crd资源更新")
 			// 更新secret
+			for _, ns := range nss.Items {
+				reqLogger.Info("操作命名空间：" + ns.Name)
+				for _, t := range tls {
+					// 获取secret
+					secret := &corev1.Secret{}
+					err2 := r.client.Get(context.TODO(), types.NamespacedName{
+						Namespace: ns.Name,
+						Name:      t.Name,
+					}, secret)
+					if err2 != nil {
+						reqLogger.Error(err2, fmt.Sprintf("9| 查询Secret %s/%s失败", ns.Name, t.Name))
+						return reconcile.Result{Requeue: false}, nil
+					}
+					reqLogger.Info(fmt.Sprintf("10| 更新Secret %s/%s", ns.Name, t.Name))
+					if erru := r.client.Update(context.TODO(), resources.UpdateSecret(t, secret)); erru != nil {
+						reqLogger.Error(erru, fmt.Sprintf("11| 更新Secret %s/%s失败", ns.Name, t.Name))
+						return reconcile.Result{Requeue: false}, nil
+					}
+					time.Sleep(time.Second)
+				}
+			}
 		}
 	} else {
 		reqLogger.Info("8| 第一次创建，保存spec内容到当前实例")
-		instance.Annotations["spec"] = string(data)
-		//if err := r.client.Update(context.TODO(), instance); err != nil {
-		//	return reconcile.Result{}, err
-		//}
-		return reconcile.Result{Requeue: false}, err
+		instance.Annotations = map[string]string{"spec": string(data)}
+		if err := r.client.Update(context.TODO(), instance); err != nil {
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{Requeue: false}, nil
 	}
 
 	return reconcile.Result{}, nil

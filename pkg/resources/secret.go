@@ -7,20 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-//func NewSecretList(cs *v1alpha1.CertSecret) *corev1.SecretList {
-//	var items = make([]corev1.Secret, len(cs.Spec.Tls))
-//	for _, d := range cs.Spec.Tls {
-//		items = append(items, NewSecret(cs, d))
-//	}
-//	return &corev1.SecretList{
-//		TypeMeta: v1.TypeMeta{
-//			Kind:       "List",
-//			APIVersion: "v1",
-//		},
-//		Items:    items,
-//	}
-//}
-
 func NewSecret(cs *v1alpha1.CertSecret, data v1alpha1.TlsData, ns string) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: v1.TypeMeta{
@@ -41,6 +27,11 @@ func NewSecret(cs *v1alpha1.CertSecret, data v1alpha1.TlsData, ns string) *corev
 		StringData: newTlsData(data),
 		Type:       "kubernetes.io/tls",
 	}
+}
+
+func UpdateSecret(data v1alpha1.TlsData, s *corev1.Secret) *corev1.Secret {
+	s.StringData = newTlsData(data)
+	return s
 }
 
 func newTlsData(data v1alpha1.TlsData) map[string]string {

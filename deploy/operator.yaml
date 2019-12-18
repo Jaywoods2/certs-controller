@@ -16,7 +16,7 @@ spec:
       containers:
         - name: certs-controller
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: registry.cn-shenzhen.aliyuncs.com/jaywoods/cert-controller:0.0.1
           command:
           - certs-controller
           imagePullPolicy: Always
