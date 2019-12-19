@@ -1,4 +1,4 @@
-> 用于管理K8S个namespaes证书的创建、更新
+> 用于管理K8S各namespaes证书秘钥的创建、更新
 
 ## 参数
 
@@ -39,3 +39,8 @@ kubectl create -f deploy/crds/app_v1alpha1_certsecret_crd.yaml
 kubectl create -f deploy/operator.yaml
 kubectl create -f deploy/crds/app_v1alpha1_certsecret_cr.yaml
 ```
+
+## Todo
+
+- 监听新建Namespace事件
+- 对比secret内容判断更新
