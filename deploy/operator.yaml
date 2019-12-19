@@ -15,11 +15,10 @@ spec:
       serviceAccountName: certs-controller
       containers:
         - name: certs-controller
-          # Replace this with the built image name
-          image: registry.cn-shenzhen.aliyuncs.com/jaywoods/cert-controller:0.0.1
+          image: registry.cn-shenzhen.aliyuncs.com/jaywoods/cert-controller:0.0.2
           command:
           - certs-controller
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               value: ""

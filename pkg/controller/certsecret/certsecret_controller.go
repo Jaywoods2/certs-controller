@@ -24,6 +24,11 @@ import (
 
 var log = logf.Log.WithName("controller_certsecret")
 
+const (
+	ScopeNamespaced string = "Namespaced"
+	ScopeCluster    string = "Cluster"
+)
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
@@ -85,6 +90,7 @@ type ReconcileCertSecret struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+// todo : 还需监听namespace 新增事件
 func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CertSecret")
@@ -105,19 +111,33 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 	if instance.DeletionTimestamp != nil {
 		return reconcile.Result{}, err
 	}
-	tls := instance.Spec.Tls
-	nss := &corev1.NamespaceList{}
-	er1 := r.client.List(context.Background(), &client.ListOptions{}, nss)
-	if er1 != nil {
-		reqLogger.Error(err, "拉取namespaces失败")
-		return reconcile.Result{Requeue: true}, er1
+	nss := make([]string, 10)
+	scope := instance.Spec.Scope
+	switch scope {
+	case ScopeCluster:
+		nsl := &corev1.NamespaceList{}
+		er1 := r.client.List(context.Background(), &client.ListOptions{}, nsl)
+		if er1 != nil {
+			reqLogger.Error(err, "拉取namespaces失败")
+			return reconcile.Result{Requeue: true}, er1
+		}
+		for _, ns := range nsl.Items {
+			nss = append(nss, ns.Name)
+		}
+	case ScopeNamespaced:
+		nss = instance.Spec.Namespaces
+	default:
+		reqLogger.Info("scope not in [\"Cluster\",\"Namespaced\"]")
+		return reconcile.Result{Requeue: false}, nil
 	}
-	//nss := []string{"kube-system"}
-	//ns := "default"
+	reqLogger.Info(fmt.Sprintf("管理的命名空间为:%s", nss))
+	tls := instance.Spec.Tls
 
-	for _, ns := range nss.Items {
-		fmt.Println("打印循环的值:" + ns.Name)
-		reqLogger.Info("操作命名空间：" + ns.Name)
+	for _, ns := range nss {
+		if ns == "" {
+			continue
+		}
+		reqLogger.Info("操作命名空间：" + ns)
 		for _, t := range tls {
 			time.Sleep(time.Second)
 			// 获取secret
@@ -128,23 +148,20 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 				Kind:    "CertSecret",
 			})
 			err2 := r.client.Get(context.Background(), client.ObjectKey{
-				Namespace: ns.Name,
+				Namespace: ns,
 				Name:      t.Name,
 			}, secret)
 			if err2 != nil && errors.IsNotFound(err2) {
-				reqLogger.Info(fmt.Sprintf("1|查询secret %s/%s 报错，不存在", ns.Name, t.Name))
-
+				reqLogger.Info(fmt.Sprintf("1|查询secret %s/%s 报错，不存在", ns, t.Name))
 				// 不存在创建
-				reqLogger.Info(fmt.Sprintf("2|创建secret:%s/%s", ns.Name, t.Name))
-				//reqLogger.Info(fmt.Sprintf("3|查询的secret:%s/%s", secret.Namespace, secret.Name))
-				newSecret := resources.NewSecret(instance, t, ns.Name)
+				reqLogger.Info(fmt.Sprintf("2|创建secret:%s/%s", ns, t.Name))
+				newSecret := resources.NewSecret(instance, t, ns)
 				if errn := r.client.Create(context.Background(), newSecret); errn != nil {
 					reqLogger.Error(errn, "创建secret失败")
 					//return reconcile.Result{}, nil
 				}
 			} else {
-				reqLogger.Info(fmt.Sprintf("4| secret:%s/%s 已存在", ns.Name, t.Name))
-				//reqLogger.Info(fmt.Sprintf("5|查询的secret:%s/%s", secret.Namespace, secret.Name))
+				reqLogger.Info(fmt.Sprintf("4| secret:%s/%s 已存在", ns, t.Name))
 
 			}
 			fmt.Println()
@@ -167,8 +184,11 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 		} else if !reflect.DeepEqual(instance.Spec, *oldInstanceSpec) {
 			reqLogger.Info("Crd资源更新")
 			// 更新secret
-			for _, ns := range nss.Items {
-				reqLogger.Info("操作命名空间：" + ns.Name)
+			for _, ns := range nss {
+				if ns == "" {
+					continue
+				}
+				reqLogger.Info("操作命名空间：" + ns)
 				for _, t := range tls {
 					// 获取secret
 					secret := &corev1.Secret{}
@@ -178,17 +198,17 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 						Kind:    "CertSecret",
 					})
 					err2 := r.client.Get(context.Background(), client.ObjectKey{
-						Namespace: ns.Name,
+						Namespace: ns,
 						Name:      t.Name,
 					}, secret)
 					if err2 != nil {
-						reqLogger.Error(err2, fmt.Sprintf("9| 查询Secret %s/%s失败", ns.Name, t.Name))
+						reqLogger.Error(err2, fmt.Sprintf("9| 查询Secret %s/%s失败", ns, t.Name))
 						return reconcile.Result{Requeue: false}, nil
 					}
-					reqLogger.Info(fmt.Sprintf("10| 更新Secret %s/%s", ns.Name, t.Name))
+					reqLogger.Info(fmt.Sprintf("10| 更新Secret %s/%s", ns, t.Name))
 					// todo: 判断证书内容是否变化
 					if erru := r.client.Update(context.Background(), resources.UpdateSecret(t, secret)); erru != nil {
-						reqLogger.Error(erru, fmt.Sprintf("11| 更新Secret %s/%s失败", ns.Name, t.Name))
+						reqLogger.Error(erru, fmt.Sprintf("11| 更新Secret %s/%s失败", ns, t.Name))
 						return reconcile.Result{Requeue: true}, nil
 					}
 					time.Sleep(time.Second)

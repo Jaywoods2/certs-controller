@@ -35,7 +35,27 @@ func schema_pkg_apis_app_v1alpha1_CertSecretSpec(ref common.ReferenceCallback) c
 							},
 						},
 					},
+					"scope": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"namespaces": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
+				Required: []string{"namespaces"},
 			},
 		},
 		Dependencies: []string{
