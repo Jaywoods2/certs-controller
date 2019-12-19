@@ -10,7 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -90,7 +90,7 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 	reqLogger.Info("Reconciling CertSecret")
 	// Fetch the CertSecret instance
 	instance := &appv1alpha1.CertSecret{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.client.Get(context.Background(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -107,36 +107,44 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	tls := instance.Spec.Tls
 	nss := &corev1.NamespaceList{}
-	er1 := r.client.List(context.TODO(), &client.ListOptions{}, nss)
+	er1 := r.client.List(context.Background(), &client.ListOptions{}, nss)
 	if er1 != nil {
 		reqLogger.Error(err, "拉取namespaces失败")
-		return reconcile.Result{}, er1
+		return reconcile.Result{Requeue: true}, er1
 	}
+	//nss := []string{"kube-system"}
+	//ns := "default"
 
 	for _, ns := range nss.Items {
+		fmt.Println("打印循环的值:" + ns.Name)
 		reqLogger.Info("操作命名空间：" + ns.Name)
 		for _, t := range tls {
 			time.Sleep(time.Second)
 			// 获取secret
 			secret := &corev1.Secret{}
-			err2 := r.client.Get(context.TODO(), types.NamespacedName{
+			secret.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   appv1alpha1.SchemeGroupVersion.Group,
+				Version: appv1alpha1.SchemeGroupVersion.Version,
+				Kind:    "CertSecret",
+			})
+			err2 := r.client.Get(context.Background(), client.ObjectKey{
 				Namespace: ns.Name,
 				Name:      t.Name,
 			}, secret)
 			if err2 != nil && errors.IsNotFound(err2) {
 				reqLogger.Info(fmt.Sprintf("1|查询secret %s/%s 报错，不存在", ns.Name, t.Name))
-				fmt.Println(secret)
+
 				// 不存在创建
 				reqLogger.Info(fmt.Sprintf("2|创建secret:%s/%s", ns.Name, t.Name))
 				//reqLogger.Info(fmt.Sprintf("3|查询的secret:%s/%s", secret.Namespace, secret.Name))
 				newSecret := resources.NewSecret(instance, t, ns.Name)
-				if errn := r.client.Create(context.TODO(), newSecret); errn != nil {
+				if errn := r.client.Create(context.Background(), newSecret); errn != nil {
 					reqLogger.Error(errn, "创建secret失败")
 					//return reconcile.Result{}, nil
 				}
 			} else {
 				reqLogger.Info(fmt.Sprintf("4| secret:%s/%s 已存在", ns.Name, t.Name))
-				reqLogger.Info(fmt.Sprintf("5|查询的secret:%s/%s", secret.Namespace, secret.Name))
+				//reqLogger.Info(fmt.Sprintf("5|查询的secret:%s/%s", secret.Namespace, secret.Name))
 
 			}
 			fmt.Println()
@@ -146,16 +154,16 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 	// 关联Annotations 保留crd 上次配置，用此字段值与当前配置对比，来判断是否需要更新
 	data, _ := json.Marshal(instance.Spec)
 	if instance.Annotations != nil {
-		oldInstanceSpec := &appv1alpha1.CertSecret{}
+		oldInstanceSpec := &appv1alpha1.CertSecretSpec{}
 		if err := json.Unmarshal([]byte(instance.Annotations["spec"]), oldInstanceSpec); err != nil {
 			reqLogger.Info("Annotations[spec]不存在或格式错误")
 			reqLogger.Info("7| 第一次创建，保存spec内容到当前实例")
 			instance.Annotations["spec"] = string(data)
-			if err7 := r.client.Update(context.TODO(), instance); err7 != nil {
+			if err7 := r.client.Update(context.Background(), instance); err7 != nil {
 				reqLogger.Error(err7, "更新Annotations失败")
 				//return reconcile.Result{}, nil
 			}
-			return reconcile.Result{Requeue: true}, nil
+			return reconcile.Result{Requeue: false}, nil
 		} else if !reflect.DeepEqual(instance.Spec, *oldInstanceSpec) {
 			reqLogger.Info("Crd资源更新")
 			// 更新secret
@@ -164,7 +172,12 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 				for _, t := range tls {
 					// 获取secret
 					secret := &corev1.Secret{}
-					err2 := r.client.Get(context.TODO(), types.NamespacedName{
+					secret.SetGroupVersionKind(schema.GroupVersionKind{
+						Group:   appv1alpha1.SchemeGroupVersion.Group,
+						Version: appv1alpha1.SchemeGroupVersion.Version,
+						Kind:    "CertSecret",
+					})
+					err2 := r.client.Get(context.Background(), client.ObjectKey{
 						Namespace: ns.Name,
 						Name:      t.Name,
 					}, secret)
@@ -173,9 +186,10 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 						return reconcile.Result{Requeue: false}, nil
 					}
 					reqLogger.Info(fmt.Sprintf("10| 更新Secret %s/%s", ns.Name, t.Name))
-					if erru := r.client.Update(context.TODO(), resources.UpdateSecret(t, secret)); erru != nil {
+					// todo: 判断证书内容是否变化
+					if erru := r.client.Update(context.Background(), resources.UpdateSecret(t, secret)); erru != nil {
 						reqLogger.Error(erru, fmt.Sprintf("11| 更新Secret %s/%s失败", ns.Name, t.Name))
-						return reconcile.Result{Requeue: false}, nil
+						return reconcile.Result{Requeue: true}, nil
 					}
 					time.Sleep(time.Second)
 				}
