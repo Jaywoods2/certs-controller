@@ -189,7 +189,6 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 				if ns == "" {
 					continue
 				}
-				reqLogger.Info("操作命名空间：" + ns)
 				for _, t := range tls {
 					// 获取secret
 					secret := &corev1.Secret{}

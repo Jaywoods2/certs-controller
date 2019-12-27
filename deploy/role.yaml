@@ -9,8 +9,10 @@ rules:
   resources:
   - pods
   - events
+  - configmaps
   - secrets
   - namespaces
+  - services
   verbs:
   - '*'
 - apiGroups:
@@ -34,21 +36,22 @@ rules:
   - deployments/finalizers
   verbs:
   - update
-#- apiGroups:
-#  - ""
-#  resources:
-#  - pods
-#  verbs:
-#  - get
-#- apiGroups:
-#  - apps
-#  resources:
-#  - replicasets
-#  verbs:
-#  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
 - apiGroups:
   - app.pakchoi.top
   resources:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+    - monitoring.coreos.com
+  resources:
+    - servicemonitors
+  verbs:
+    - get
+    - create
