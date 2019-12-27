@@ -59,12 +59,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner CertSecret
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &appv1alpha1.CertSecret{},
 	})
+	if err != nil {
+		return err
+	}
+	// 监听namespace变化
+	err = c.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueRequestForNs{client: mgr.GetClient()})
 	if err != nil {
 		return err
 	}
@@ -90,7 +94,6 @@ type ReconcileCertSecret struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-// todo : 还需监听namespace 新增事件
 func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling CertSecret")
@@ -137,7 +140,6 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 		if ns == "" {
 			continue
 		}
-		reqLogger.Info("操作命名空间：" + ns)
 		for _, t := range tls {
 			time.Sleep(time.Second)
 			// 获取secret
@@ -152,7 +154,7 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 				Name:      t.Name,
 			}, secret)
 			if err2 != nil && errors.IsNotFound(err2) {
-				reqLogger.Info(fmt.Sprintf("1|查询secret %s/%s 报错，不存在", ns, t.Name))
+				//reqLogger.Info(fmt.Sprintf("1|查询secret %s/%s 报错，不存在", ns, t.Name))
 				// 不存在创建
 				reqLogger.Info(fmt.Sprintf("2|创建secret:%s/%s", ns, t.Name))
 				newSecret := resources.NewSecret(instance, t, ns)
@@ -164,7 +166,6 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 				reqLogger.Info(fmt.Sprintf("4| secret:%s/%s 已存在", ns, t.Name))
 
 			}
-			fmt.Println()
 		}
 
 	}
