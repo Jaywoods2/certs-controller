@@ -25,9 +25,7 @@ spec:
             -----END CERTIFICATE-----"
   scope: "Cluster" # Namespaced 或 Cluster
 # Namespaced时填写
-  namespaces:
-    - default
-    - kube-system
+  namespaces: []
   cascade: true # 测试时，删除cr级联删除关联的secret
 ```
 
@@ -44,5 +42,4 @@ kubectl create -f deploy/crds/app_v1alpha1_certsecret_cr.yaml
 
 ## Todo
 
-- 监听新建Namespace事件
 - 对比secret内容判断更新
