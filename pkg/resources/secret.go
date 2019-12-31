@@ -8,21 +8,24 @@ import (
 )
 
 func NewSecret(cs *v1alpha1.CertSecret, data v1alpha1.TlsData, ns string) *corev1.Secret {
+	var ownerReference []v1.OwnerReference
+	if cs.Spec.Cascade {
+		ownerReference = []v1.OwnerReference{
+			*v1.NewControllerRef(cs, schema.GroupVersionKind{
+				Group:   v1alpha1.SchemeGroupVersion.Group,
+				Version: v1alpha1.SchemeGroupVersion.Version,
+				Kind:    "CertSecret",
+			})}
+	}
 	return &corev1.Secret{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
 		ObjectMeta: v1.ObjectMeta{
-			Name:      data.Name,
-			Namespace: ns,
-			OwnerReferences: []v1.OwnerReference{
-				*v1.NewControllerRef(cs, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "CertSecret",
-				}),
-			},
+			Name:            data.Name,
+			Namespace:       ns,
+			OwnerReferences: ownerReference,
 		},
 		StringData: newTlsData(data),
 		Type:       "kubernetes.io/tls",

@@ -12,8 +12,6 @@ type TlsData struct {
 	Crt  string `json:"crt,omitempty"`
 }
 
-
-
 // CertSecretSpec defines the desired state of CertSecret
 // +k8s:openapi-gen=true
 type CertSecretSpec struct {
@@ -23,6 +21,7 @@ type CertSecretSpec struct {
 	Tls        []TlsData `json:"tls,omitempty"`
 	Scope      string    `json:"scope,omitempty"`
 	Namespaces []string  `json:"namespaces"`
+	Cascade    bool      `json:"cascade"`
 }
 
 // CertSecretStatus defines the observed state of CertSecret

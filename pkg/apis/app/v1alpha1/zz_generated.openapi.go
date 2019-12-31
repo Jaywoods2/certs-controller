@@ -54,8 +54,14 @@ func schema_pkg_apis_app_v1alpha1_CertSecretSpec(ref common.ReferenceCallback) c
 							},
 						},
 					},
+					"cascade": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 				},
-				Required: []string{"namespaces"},
+				Required: []string{"namespaces", "cascade"},
 			},
 		},
 		Dependencies: []string{

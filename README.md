@@ -23,10 +23,12 @@ spec:
       crt: "-----BEGIN CERTIFICATE-----
             XANKSJHDKWS填写证书内容NKDUASDNA2
             -----END CERTIFICATE-----"
-  scope: "Namespaced" # Namespaced 或 Cluster
+  scope: "Cluster" # Namespaced 或 Cluster
+# Namespaced时填写
   namespaces:
     - default
     - kube-system
+  cascade: true # 测试时，删除cr级联删除关联的secret
 ```
 
 ## 部署
