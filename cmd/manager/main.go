@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/Jaywoods/certs-controller/pkg/webhook"
 	"os"
 	"runtime"
 
@@ -108,8 +109,15 @@ func main() {
 	}
 
 	// Setup all Controllers
+	log.Info("Setup all Controllers")
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	log.Info("setting up webhooks")
+	if err := webhook.AddToManager(mgr); err != nil {
+		log.Error(err, "unable to register webhooks to the manager")
 		os.Exit(1)
 	}
 

@@ -1,0 +1,28 @@
+[ req ]
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_ca ]
+basicConstraints = critical, CA:TRUE
+keyUsage = critical, digitalSignature, keyEncipherment, keyCertSign
+[ v3_req_server ]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names_cluster
+[ v3_req_client ]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+[ v3_req_peer ]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names_cluster
+[ alt_names_cluster ]
+DNS.1 = cert-controller-server
+DNS.2 = cert-controller-server.test
+DNS.3 = cert-controller-server.test.svc
+DNS.4 = cert-controller-server.test.svc.cluster.local
+DNS.5 = localhost
+IP.1 = 127.0.0.1
+IP.2 = 10.72.42.5

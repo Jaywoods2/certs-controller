@@ -31,3 +31,17 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "certs-controller"
+          resources:
+            limits:
+              cpu: 100m
+              memory: 80Mi
+            requests:
+              cpu: 100m
+              memory: 80Mi
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /tmp/k8s-webhook-server/serving-certs/
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: cert-controller-webhook-secret
