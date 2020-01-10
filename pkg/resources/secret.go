@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"bytes"
 	"github.com/Jaywoods/certs-controller/pkg/apis/app/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +31,15 @@ func NewSecret(cs *v1alpha1.CertSecret, data v1alpha1.TlsData, ns string) *corev
 		StringData: newTlsData(data),
 		Type:       "kubernetes.io/tls",
 	}
+}
+
+func DiffSecret(data v1alpha1.TlsData, s *corev1.Secret) (*corev1.Secret, bool) {
+	keyOk := bytes.Equal([]byte(data.Key), s.Data["tls.key"])
+	crtOk := bytes.Equal([]byte(data.Crt), s.Data["tls.crt"])
+	if keyOk && crtOk {
+		return nil, true
+	}
+	return UpdateSecret(data, s), false
 }
 
 func UpdateSecret(data v1alpha1.TlsData, s *corev1.Secret) *corev1.Secret {

@@ -18,6 +18,9 @@ spec:
           image: registry.cn-shenzhen.aliyuncs.com/jaywoods/cert-controller:0.1.6
           command:
           - certs-controller
+          args:
+          - "--zap-level=info"
+          - "--zap-encoder=console"
           imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE

@@ -192,11 +192,11 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 				for _, t := range tls {
 					// 获取secret
 					secret := &corev1.Secret{}
-					secret.SetGroupVersionKind(schema.GroupVersionKind{
-						Group:   appv1alpha1.SchemeGroupVersion.Group,
-						Version: appv1alpha1.SchemeGroupVersion.Version,
-						Kind:    "CertSecret",
-					})
+					// secret.SetGroupVersionKind(schema.GroupVersionKind{
+					// 	Group:   appv1alpha1.SchemeGroupVersion.Group,
+					// 	Version: appv1alpha1.SchemeGroupVersion.Version,
+					// 	Kind:    "CertSecret",
+					// })
 					err2 := r.client.Get(context.Background(), client.ObjectKey{
 						Namespace: ns,
 						Name:      t.Name,
@@ -205,13 +205,16 @@ func (r *ReconcileCertSecret) Reconcile(request reconcile.Request) (reconcile.Re
 						reqLogger.Error(err2, fmt.Sprintf("9| 查询Secret %s/%s失败", ns, t.Name))
 						return reconcile.Result{Requeue: false}, nil
 					}
-					reqLogger.Info(fmt.Sprintf("10| 更新Secret %s/%s", ns, t.Name))
-					// todo: 判断证书内容是否变化
-					if erru := r.client.Update(context.Background(), resources.UpdateSecret(t, secret)); erru != nil {
-						reqLogger.Error(erru, fmt.Sprintf("11| 更新Secret %s/%s失败", ns, t.Name))
-						return reconcile.Result{Requeue: true}, nil
+					s, ok := resources.DiffSecret(t, secret)
+					if !ok {
+						reqLogger.Info(fmt.Sprintf("10| 更新Secret %s/%s", ns, t.Name))
+						if erru := r.client.Update(context.Background(), s); erru != nil {
+							reqLogger.Error(erru, fmt.Sprintf("11| 更新Secret %s/%s失败", ns, t.Name))
+							return reconcile.Result{Requeue: true}, nil
+						}
+						time.Sleep(time.Second)
 					}
-					time.Sleep(time.Second)
+
 				}
 			}
 		}
