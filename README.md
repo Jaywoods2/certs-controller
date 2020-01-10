@@ -1,3 +1,8 @@
+[![](https://img.shields.io/badge/go-1.12.9-brightgreen.svg)](https://img.shields.io/badge/go-1.12.9-brightgreen.svg)
+[![](https://img.shields.io/badge/OperatorSdk-v0.13.1-yellow.svg)](https://img.shields.io/badge/OperatorSdk-v0.13.1-yellow.svg)
+[![](https://img.shields.io/badge/ClientGo-v11.0.0-orange.svg)](https://img.shields.io/badge/ClientGo-v11.0.0-orange.svg)
+[![](https://img.shields.io/badge/mode-HA-blue.svg)](https://img.shields.io/badge/mode-HA-blue.svg)
+
 ## 功能
 
 - 根据CertSecret配置创建更新Namespace下的Secret
