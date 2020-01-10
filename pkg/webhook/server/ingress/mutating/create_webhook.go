@@ -11,7 +11,7 @@ func init() {
 		Name("mutating-create-ingress.pakchoi.top").
 		Path("/mutating-create-ingress").
 		Mutating().
-		Operations(admissionregistrationv1beta1.Create).
+		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
 		FailurePolicy(admissionregistrationv1beta1.Fail).
 		ForType(&v1beta1.Ingress{})
 }

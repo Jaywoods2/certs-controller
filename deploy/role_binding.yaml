@@ -5,8 +5,12 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: certs-controller
-  namespace: default
+  namespace: test
 roleRef:
   kind: ClusterRole
-  name: certs-controller
+  name: cluster-admin
   apiGroup: rbac.authorization.k8s.io
+#roleRef:
+#  kind: ClusterRole
+#  name: certs-controller
+#  apiGroup: rbac.authorization.k8s.io

@@ -15,7 +15,7 @@ spec:
       serviceAccountName: certs-controller
       containers:
         - name: certs-controller
-          image: registry.cn-shenzhen.aliyuncs.com/jaywoods/cert-controller:0.1.3
+          image: registry.cn-shenzhen.aliyuncs.com/jaywoods/cert-controller:0.1.6
           command:
           - certs-controller
           imagePullPolicy: IfNotPresent
